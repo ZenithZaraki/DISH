@@ -1,0 +1,57 @@
+{
+  "DiagPanel": {
+    "file": "DiagPanel.svelte",
+    "importPath": "@components/DiagPanel.svelte",
+    "tag": "diag-panel"
+  },
+  "DiagPanelRenderer": {
+    "file": "DiagPanelRenderer.svelte",
+    "importPath": "@components/DiagPanelRenderer.svelte",
+    "tag": "diag-panel-renderer"
+  },
+  "MainPanel": {
+    "file": "MainPanel.svelte",
+    "importPath": "@components/MainPanel.svelte",
+    "tag": "main-panel"
+  },
+  "MainPanelRenderer": {
+    "file": "MainPanelRenderer.svelte",
+    "importPath": "@components/MainPanelRenderer.svelte",
+    "tag": "main-panel-renderer"
+  },
+  "ModuleRenderer": {
+    "file": "ModuleRenderer.svelte",
+    "importPath": "@components/ModuleRenderer.svelte",
+    "tag": "module-renderer"
+  },
+  "ScuzballOverlay": {
+    "file": "ScuzballOverlay.svelte",
+    "importPath": "@components/ScuzballOverlay.svelte",
+    "tag": "scuzball-overlay"
+  },
+  "sidebar": {
+    "file": "sidebar.svelte",
+    "importPath": "@components/sidebar.svelte",
+    "tag": "sidebar"
+  },
+  "SidebarRenderer": {
+    "file": "SidebarRenderer.svelte",
+    "importPath": "@components/SidebarRenderer.svelte",
+    "tag": "sidebar-renderer"
+  },
+  "SwitchBoard": {
+    "file": "SwitchBoard.svelte",
+    "importPath": "@components/SwitchBoard.svelte",
+    "tag": "switch-board"
+  },
+  "SwitchPanel": {
+    "file": "SwitchPanel.svelte",
+    "importPath": "@components/SwitchPanel.svelte",
+    "tag": "switch-panel"
+  },
+  "ui": {
+    "file": "ui.svelte",
+    "importPath": "@components/ui.svelte",
+    "tag": "ui"
+  }
+}

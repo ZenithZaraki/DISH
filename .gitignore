@@ -1,0 +1,9 @@
+.DS_Store
+node_modules
+venv
+/dish-electron/userdata
+/safu_dish_backend/logs
+local_deps
+/node
+/safu_dish_backend/app/modules/Test_APM/models
+/safu_dish_backend/app/modules/Test_APM/onnx_models

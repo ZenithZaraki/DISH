@@ -1,0 +1,6 @@
+DISH is proprietary software.
+
+Use of this software is governed by the DISH End-User License Agreement located at:
+DISH_EULA.html
+
+Copyright © 2025 SkyTeam Aerospace Foundation. All rights reserved.
