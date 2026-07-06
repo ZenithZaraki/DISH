@@ -26,6 +26,7 @@ for p in (PROJECT_ROOT, APP_PATH):
     if p not in sys.path:
         sys.path.append(p)
 
+os.makedirs(os.path.join(BASE_DIR, "app", "config"), exist_ok=True)
 BOOTSTATE_PATH = os.path.join(BASE_DIR, "app", "config", "bootstate.json")
 # DISABLE_AUTO_MODEL_LOAD = os.environ.get("DISABLE_AUTO_MODEL_LOAD", "1") == "0"
 # if DISABLE_AUTO_MODEL_LOAD:
@@ -46,6 +47,19 @@ warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", message=".*flash attention.*")
 
+# makes a flag that cannot be cleared once set
+# this ensures that there are no shenanigans
+def _term():
+    value = False
+    def a():
+        nonlocal value
+        value = True
+    def b():
+        return value
+    return a, b
+set_terminating, is_terminating = _term()
+del _term
+
 # # ----- GPU PURGE ------ #
 # try:
 #     if torch.cuda.is_available():
@@ -57,7 +71,10 @@ warnings.filterwarnings("ignore", message=".*flash attention.*")
 
 def purge_python_subprocesses(targets=("uvicorn", "slloader", "embedder_worker", "torchrun", "scuzlite", "nova_launcher", "fastapi")):
     killed = 0
+    ownpid = os.getpid()
     for proc in psutil.process_iter(attrs=["pid", "name", "cmdline"]):
+        if proc.pid == ownpid:
+            continue
         try:
             cmdline = " ".join(proc.info.get("cmdline") or [])
             if any(t.lower() in cmdline.lower() for t in targets):
@@ -74,9 +91,13 @@ def purge_python_subprocesses(targets=("uvicorn", "slloader", "embedder_worker",
     else:
         print(Fore.LIGHTBLACK_EX + "[BOOT CLEANUP] No orphaned subprocesses found.")
 
-def safe_halt(reason):
+def safe_halt(reason="unspecified reason"):
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     print(Fore.RED + f"[SAFE HALT] {reason}")
-    print(Fore.YELLOW + "System halted. Press Ctrl+C to exit manually for debugging.")
+    print(Fore.YELLOW + "System halted. Press Ctrl+C to exit manually for debugging." + Fore.RESET)
+    if sys.stdin.closed or not sys.stdin.readable():
+        print(f"{Fore.YELLOW}STDIN closed, shutting down{Fore.RESET}")
+        sys.exit(0)
     try:
         while True:
             time.sleep(1)
@@ -85,13 +106,18 @@ def safe_halt(reason):
         sys.exit(0)
 
 def handle_sigterm(*_):
+    if is_terminating():return
+    set_terminating()
     print(Fore.RED + "[!] SIGTERM received. Cleaning up before exit.")
     shutdown_all()
     safe_halt()
 
 
 def handle_sigint(*_):
+    if is_terminating():return
+    set_terminating()
     print(Fore.RED + "[!] SIGINT (Ctrl+C) received. Cleaning up before exit.")
+    sys.stdin.close()
     shutdown_all()
     safe_halt()
 
@@ -370,9 +396,9 @@ def boot_dish_router(max_wait_time=10, retry_interval=0.5):
             raise RuntimeError("DISH Router did not report ready state.")
 
         from app.router import router as manifest_router
+        global router_run_command, CommandRequest
         from app.router import router_run_command, CommandRequest
 
-        global router_run_command, CommandRequest
         router_run_command = router_run_command
         CommandRequest = CommandRequest
 

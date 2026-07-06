@@ -1,14 +1,16 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { exec } = require("child_process");
-const axios = require("axios");
+const { exec, spawn, ChildProcess } = require("child_process");
+const http = require("http");
 
-const FRONTEND_URL = "http://localhost:5173";
-const BACKEND_HEALTH = "http://127.0.0.1:8000/__bootcheck__";
 
-const FRONTEND_PORT = "5173";
-const BACKEND_PORT = "8000";
+/**used to enable debugging features */
+const DEBUG_MODE = Boolean(process.argv.find(v=>v.toLowerCase()==="--dbg"));
+
+const BACKEND_PORT = process.argv.find((_,i,o)=>o[i-1]==="-p") ?? "8000";
+
+const BACKEND_HEALTH = `http://127.0.0.1:${BACKEND_PORT}/__bootcheck__`;
 
 // ─────────────────────────────────────────────
 // PORTABLE PATHS
@@ -21,8 +23,12 @@ const FRONTEND_DIR = path.join(BASEPATH, "safu_dish_frontend");
 const USERDATA_DIR = path.join(BASEPATH, "userdata");
 
 const VENV_DIR = path.join(BACKEND_DIR, "venv");
-const VENV_SCRIPTS = path.join(VENV_DIR, "Scripts");
-const VENV_PYTHON = path.join(VENV_SCRIPTS, "python.exe");
+const VENV_PYTHON = process.platform === "win32" ?
+    path.join(VENV_DIR, "Scripts", "python.exe") :
+    path.join(VENV_DIR, "bin", "python3");
+
+// console.log(VENV_PYTHON);
+// process.exit(0);
 
 const NODE_DIR = path.join(BASEPATH, "node");
 const NODE_EXE = path.join(NODE_DIR, "node.exe");
@@ -31,6 +37,9 @@ const NPM_CMD = path.join(NODE_DIR, "npm.cmd");
 const TEMP_DIR = path.join(USERDATA_DIR, "temp");
 const CACHE_DIR = path.join(USERDATA_DIR, "cache");
 const PYCACHE_DIR = path.join(USERDATA_DIR, "pycache");
+
+/**@type {ChildProcess} */
+let backendProcess;
 
 let mainWindow;
 let cleanupStarted = false;
@@ -121,28 +130,26 @@ function runCommand(command, options = {}) {
 // START BACKEND
 // ─────────────────────────────────────────────
 
+/**
+ * @returns {ChildProcess}
+ */
 function startBackend() {
-  console.log("[BOOT] Launching backend terminal...");
+    console.log("[BOOT] Launching backend terminal...");
 
-  const cmd =
-    `start "DISH Backend" /MIN /D "${BACKEND_DIR}" cmd.exe /k ` +
-    `""${VENV_PYTHON}" -m uvicorn main:app --host 127.0.0.1 --port ${BACKEND_PORT} --reload"`;
+    // const cmd =
+    //     `start "DISH Backend" /MIN /D "${BACKEND_DIR}" cmd.exe /k ` +
+    //     `""${VENV_PYTHON}" -m uvicorn main:app --host 127.0.0.1 --port ${BACKEND_PORT} --reload"`;
 
-  runCommand(cmd, { cwd: BACKEND_DIR });
-}
-
-// ─────────────────────────────────────────────
-// START FRONTEND
-// ─────────────────────────────────────────────
-
-function startFrontend() {
-  console.log("[BOOT] Launching frontend terminal...");
-
-  const cmd =
-    `start "DISH Frontend" /MIN /D "${FRONTEND_DIR}" cmd.exe /k ` +
-    `""${NPM_CMD}" run dev"`;
-
-  runCommand(cmd, { cwd: FRONTEND_DIR });
+    // runCommand(cmd, { cwd: BACKEND_DIR });
+    const proc = spawn(VENV_PYTHON, ["-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", BACKEND_PORT], {windowsHide:true,cwd:BACKEND_DIR,stdio:DEBUG_MODE?"pipe":["pipe","ignore","ignore"]});
+    if (DEBUG_MODE) {
+        proc.stdout.pipe(fs.createWriteStream("be-out.log"));
+        proc.stderr.pipe(fs.createWriteStream("be-err.log"));
+        proc.stdin.end();
+    } else {
+        proc.stdin.end();
+    }
+    return proc;
 }
 
 // ─────────────────────────────────────────────
@@ -152,8 +159,9 @@ function startFrontend() {
 async function waitForUrl(url, maxRetries = 60, delayMs = 1000) {
   for (let i = 0; i < maxRetries; i++) {
     try {
-      const res = await axios.get(url, { timeout: 800 });
-      if (res.status >= 200 && res.status < 500) {
+      /**@type {http.IncomingMessage} */
+      const res = await new Promise(r=>http.get(url, { timeout: 800 }, res=>{r(res);}).on("error",()=>{r({statusCode:500});}));
+      if (res.statusCode >= 200 && res.statusCode < 500) {
         return true;
       }
     } catch {
@@ -168,10 +176,6 @@ async function waitForUrl(url, maxRetries = 60, delayMs = 1000) {
 
 async function waitForBackend(maxRetries = 60, delayMs = 1000) {
   return waitForUrl(BACKEND_HEALTH, maxRetries, delayMs);
-}
-
-async function waitForFrontend(maxRetries = 60, delayMs = 1000) {
-  return waitForUrl(FRONTEND_URL, maxRetries, delayMs);
 }
 
 // ─────────────────────────────────────────────
@@ -222,12 +226,11 @@ async function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, "src", "splash.html"));
+  mainWindow.loadFile(path.join(__dirname, "src", "html", "splash.html"));
 
-  startBackend();
-  startFrontend();
+  backendProcess = startBackend();
 
-  const backendReady = await waitForBackend();
+  const backendReady = await waitForBackend(2);
 
   if (!backendReady) {
     mainWindow.loadURL(
@@ -242,22 +245,7 @@ async function createWindow() {
     return;
   }
 
-  const frontendReady = await waitForFrontend();
-
-  if (!frontendReady) {
-    mainWindow.loadURL(
-      "data:text/html," +
-      encodeURIComponent(
-        `<body style="background:#111;color:orange;font-family:monospace;padding:2rem;">
-          <h1>Frontend failed to start.</h1>
-          <p>Check the DISH Frontend terminal.</p>
-        </body>`
-      )
-    );
-    return;
-  }
-
-  mainWindow.loadURL(FRONTEND_URL);
+  mainWindow.loadFile(path.join(__dirname, "src", "html", "index.html"));
 }
 
 // ─────────────────────────────────────────────
@@ -270,21 +258,7 @@ function cleanup() {
 
   console.log("[SHUTDOWN] Cleaning up DISH child processes...");
 
-  exec(
-    `taskkill /FI "WINDOWTITLE eq DISH Backend*" /F /T >nul 2>&1`,
-    () => console.log("[OK] Backend console closed.")
-  );
-
-  exec(
-    `taskkill /FI "WINDOWTITLE eq DISH Frontend*" /F /T >nul 2>&1`,
-    () => console.log("[OK] Frontend console closed.")
-  );
-
-  // Conservative-ish sweep. Still a broom, not a scalpel.
-  exec(
-    `taskkill /F /IM vite.exe /IM npm.exe /IM uvicorn.exe /T >nul 2>&1`,
-    () => console.log("[OK] Remaining DISH child tools purged.")
-  );
+  backendProcess.kill();
 }
 
 // ─────────────────────────────────────────────

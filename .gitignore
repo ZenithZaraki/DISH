@@ -7,3 +7,6 @@ local_deps
 /node
 /safu_dish_backend/app/modules/Test_APM/models
 /safu_dish_backend/app/modules/Test_APM/onnx_models
+__pycache__
+/safu_dish_backend/app/config
+*.log

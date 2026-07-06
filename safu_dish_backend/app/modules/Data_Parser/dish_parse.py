@@ -9,8 +9,9 @@ from dev.diagnostics import get_logger, terminal_alert
 logger = get_logger("data_parser.dish_parser")
 salert = terminal_alert
 
-OUTPUT_DIR = r"X:\SAFU NOVA\userdata\parsed_data"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# TODO: make this path not hardcoded
+#OUTPUT_DIR = r"X:\SAFU NOVA\userdata\parsed_data"
+#os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 def load_raw_document(file_path: str) -> dict:
