@@ -3,6 +3,8 @@ node_modules
 venv
 /dish-electron/userdata
 /safu_dish_backend/logs
+/safu_dish_backend/telemetry
+/safu_dish_backend/telemetry_graphs
 local_deps
 /node
 /safu_dish_backend/app/modules/Test_APM/models
