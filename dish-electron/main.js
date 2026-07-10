@@ -226,11 +226,11 @@ async function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, "src", "html", "splash.html"));
+  mainWindow.loadFile(path.join(__dirname, "src", "components", "main", "splash.html"));
 
   backendProcess = startBackend();
 
-  const backendReady = await waitForBackend(2);
+  const backendReady = await waitForBackend(10);
 
   if (!backendReady) {
     mainWindow.loadURL(
@@ -245,7 +245,7 @@ async function createWindow() {
     return;
   }
 
-  mainWindow.loadFile(path.join(__dirname, "src", "html", "index.html"));
+  mainWindow.loadFile(path.join(__dirname, "src", "components", "main", "index.html"));
 }
 
 // ─────────────────────────────────────────────
