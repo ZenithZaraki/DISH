@@ -1,0 +1,46 @@
+this file describes the APM manifest.json schema
+
+manifest.json has the following format
+{
+    structure<UIGroup[]>: defines the UI structure
+    commands<Record<string,Command>>: defines the commands available to the structure
+}
+
+UIGroup:
+{
+    zone<string>: the UI zone this group resides in
+    name<string>: the name of this group
+    components<UIComponent[]>: a list of components that make up this group
+}
+UIComponent:
+{
+    type<string>: what UI element this component is
+    attrs<Record<string,string>>: attributes to be passed to the frontend UI component during creation (eg. the text of a button)
+    id<string?>: optional id for reference by other UI components
+    routing_key<string|"!"|("."+string)|null>: see Routing Keys
+    command_id<string>: the command that is executed, must be a key of the "commands" field of the ancestor Manifest
+    payload<Record<string,any|"$"+string>>: the payload that is used, see Payloads
+}
+
+Command:
+{
+    func<string>: the actual function that handles this command
+    bind<RESERVED>: reserved for future use in binding some arguments
+}
+
+
+Routing Keys:
+routing keys are provided to command handlers as the first argument, allowing one handler to handle many related requests (such as discarding changes from different dialogs)
+the "routing_key" field of the UIComponent allows for three forms:
+"!", null, or omitted - no "routing_key", this component is not interactive
+"."+string - auto-generates the rest of the routing key, produces a key of the form "{module}.{zone}.{string}"
+string - manual specification of the full routing key
+
+Payloads:
+payloads may be specified entirely with hardcoded values, or include dynamic values
+
+a dynamic value is a string prefixed with "$" (use "$$" to escape this and render a single "$" followed by the rest of the string)
+
+a dynamic value is of the form "${component_id}.{field_name}"
+"component_id" is the id of the component that data will be used from, the special reserved id of "@self" is used when the payload depends on the value of the component that will trigger the command
+"field_name" is the name of the public field that the payload will pull data from

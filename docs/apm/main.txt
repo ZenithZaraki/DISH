@@ -1,0 +1,20 @@
+this file describes the anatomy and behavior of APMs (as defined by tsj845 aka Tristan based on the test APMs developed by Zenith)
+
+APMs are found in "safu_dish_backend/app/modules" (additional paths TBD)
+
+all valid APMs in these paths are automatically registered and loaded
+
+
+a valid APM conforms to the following file structure:
+
+|- APM NAME
+|\ __init__.py
+|\ ui
+ |\ manifest.json
+|\ functions.py
+
+
+functions.py is where all public-facing API members must reside, functions.py is free to import additional files in the same directory or subdirectories
+
+manifest.json defines the UI and how commands are mapped from the frontend to implementing functions
+
