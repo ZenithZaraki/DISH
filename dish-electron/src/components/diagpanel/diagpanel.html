@@ -1,0 +1,43 @@
+<div class="diag-ui">
+    <!-- {#if Object.keys(controls).length > 0}
+    {#each Object.entries(controls) as [groupName, groupControls]} -->
+    <div class="diag-group">
+        <h3>{groupName}</h3>
+
+        <!-- {#each groupControls as control (control.routing_key)} -->
+        <div class="form-entry">
+        <!-- {#await loadComponent(control.type) then Component}
+        {#if Component} -->
+        <!-- <svelte:component
+        this={Component}
+        control={control}
+        result={commandResults[control.routing_key]?.[control.result_key] ?? commandResults[control.routing_key]}
+        on:trigger={(e) => handleCommand(control, e.detail || {})}
+        /> -->
+
+        <!-- {#if control.type === 'button' && commandResults[control.routing_key]}
+        <svelte:component
+        this={loadedComponents['readonly']}
+        control={control}
+        result={commandResults[control.routing_key]}
+        />
+        {/if}
+        {:else} -->
+        <div class="unknown-control">
+            <strong>⚠ Unknown component type:</strong> {control.type}
+        </div>
+        <!-- {/if}
+        {:catch error} -->
+        <div class="unknown-control">
+            <strong>❌ Component load failed:</strong> {error.message}</div>
+        <!-- {/await} -->
+        </div>
+        <!-- {/each} -->
+    </div>
+    <!-- {/each}
+    {:else} -->
+    <div class="no-controls">
+        <em>No diagnostics available.</em>
+    </div>
+    <!-- {/if} -->
+</div>

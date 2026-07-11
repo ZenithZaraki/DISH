@@ -1,0 +1,70 @@
+@import url('https://fonts.cdnfonts.com/css/ocr-a-extended');
+.sidebar-ui {
+    font-family: 'Audiowide', sans-serif;
+    margin-top: 0rem;
+    padding-right: 1rem;
+    padding-left: 1rem;
+    padding-bottom: .1rem;
+    color: cyan;
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #0ff transparent;
+}
+
+.h2 {
+    margin-top: .1rem;
+    padding-top: 0rem;
+    padding-bottom: 0rem;
+}
+
+select {
+    width: 90%;
+    margin-top: 0rem;
+    margin-bottom: .3rem;
+    font-family: 'OCR A Extended', monospace;
+    font-size: 1.1rem;
+    background-color: #000;
+    color: cyan;
+    border: 1px solid #0ff;
+    padding-top: 0%;
+    padding: 0.4rem;
+    border-radius: 6px;
+}
+
+select:hover, select:focus {
+    outline: none;
+    color: #0ff;
+    border-color: #0ff;
+    box-shadow: 0 0 8px #0ff, 0 0 16px #0ff;
+    background-color: #000;
+    transform: translateY(-3px);
+}
+
+.group-block {
+    margin-top: 1rem;
+}
+
+h3 {
+    font-family: 'Audiowide', sans-serif;
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    color: #0ff;
+    border-bottom: 1.3px solid #0ff3;
+    padding-bottom: 0.5rem;
+}
+
+.control-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: .3rem; 
+    margin-bottom: 1rem;
+}
+
+.no-tools {
+    color: #777;
+    text-align: left;
+    font-style: italic;
+    margin-top: 2rem;
+}

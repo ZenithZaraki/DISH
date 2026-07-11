@@ -1,0 +1,63 @@
+@import url('https://fonts.cdnfonts.com/css/ocr-a-extended');
+.diag-ui {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    height: 100%;
+    max-height: 100vh;
+    padding-left: .15rem;
+    padding-right: .15rem;
+    padding-bottom: .5rem;
+    margin-left: 0%;
+    margin-right: 0%;
+    color: cyan;
+    scrollbar-width: thin;
+    scrollbar-color: #0ff transparent;
+}
+
+.diag-ui::-webkit-scrollbar {
+    width: 6px;
+}
+
+.diag-ui::-webkit-scrollbar-thumb {
+    background-color: #0ff;
+    border-radius: 3px;
+}
+
+.diag-ui::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+.diag-group {
+    margin-right: 0%;
+    margin-left: 0%;
+    padding-left: 0%;
+    padding-right: 0%;
+}
+
+h3 {
+    font-family: 'Audiowide', sans-serif;
+    font-size: 1.5rem;
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
+    color: #0ff;
+}
+
+.form-entry {
+    margin-bottom: 1rem; /* spacing between stacked elements */
+    margin-right: 0%;
+    margin-left: 0%;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* or left/right if you want tighter control */
+}
+
+.no-controls {
+    font-family: sans-serif;
+    font-size: 12.5px;
+    text-align: center;
+    font-style: italic;
+    color: #888;
+    margin-top: 2rem;
+}

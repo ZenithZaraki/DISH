@@ -3,6 +3,7 @@ const WEBROOT = (()=>{
     const up1 = (s) => s.slice(0,s.lastIndexOf('/'));
     return up1(up1(up1(document.location.pathname)));
 })();
+const MODROOT = `${WEBROOT}/modules`;
 
 /**
  * @param {string} tag
@@ -32,7 +33,8 @@ class HTMLInclude extends HTMLElement {
 
     connectedCallback() {
         const name = this.getAttribute("name");
-        const componentSrc = `${WEBROOT}/components/${name}/${name}`;
+        const root = this.getAttribute("root") || `components`;
+        const componentSrc = `${WEBROOT}/${root}/${name}/${name}`;
         /**@type {{style:boolean,script:boolean,html:string?}} */
         const component = {
             style: false,

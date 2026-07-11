@@ -419,7 +419,7 @@ if not boot_dish_router():
 
 @app.get("/__routes__")
 def list_routes():
-    return [r.path for r in app.routes]
+    return [*filter(None,[r.path if ("path" in dir(r)) else None for r in app.routes])]
 
 def warning_to_logger(message, category, filename, lineno, file=None, line=None):
     wlogger.warning(f"{category.__name__}: {message} | {filename}:{lineno}")

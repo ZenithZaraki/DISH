@@ -3,14 +3,23 @@
     <head>
         <title>DISH Core</title>
         <link rel="stylesheet" type="text/css" href="./index.css">
+        <script type="importmap">
+            {
+                "imports": {
+                    "mod": "../../modules/"
+                }
+            }
+        </script>
         <script src="../include.js"></script>
     </head>
     <body>
+        <x-include name="polypanel"></x-include>
         <x-include name="eula" tagname="x-eula"></x-include>
         <header class="dish-header">
             <div class="header-buttons">
-                <button class="hamburger-button">☰</button>
-                <button class="wrench-button">⚙️</button>
+                <button class="hamburger-button"><img src="../../assets/images/hamburger-icon.svg"></button>
+                <!-- <button class="wrench-button">⚙️</button> -->
+                <button class="wrench-button"><img src="../../assets/images/wrench-icon.svg"></button>
             </div>
             <div class="header-body">
                 <h1>SAF DISH</h1>
@@ -23,10 +32,16 @@
 
         <div class="content">
             <div id="dish-sidebar" class="sidebar hidden">
-                <Sidebar {registry} selectedModule={$selectedModuleId} />
+                <x-include name="sidebar" tagname="x-sidebar"></x-include>
+                <!-- <Sidebar {registry} selectedModule={$selectedModuleId} /> -->
             </div>
 
             <div class="mainzone">
+                <x-polypanel>
+                    <x-pp-panel pid="switchboard" default>
+                        Switchboard test
+                    </x-pp-panel>
+                </x-polypanel>
             <!-- {#if $selectedModuleId === 'switchboard'}
                 <SwitchPanel {registry} />
             {:else}
@@ -35,7 +50,8 @@
             </div>
 
             <div id="dish-dialog" class="diag hidden">
-                <DiagPanelRenderer controls={$selectedDiagControls} />
+                <!-- <DiagPanelRenderer controls={$selectedDiagControls} /> -->
+                <x-include name="diagpanel" tagname="x-diagpanel"></x-include>
             </div>
         </div>
 
@@ -45,5 +61,6 @@
             <span>Digital Intelligence Stack Host —</span>
             <span class="version">vBeta 0.4.6 — "The AI knows. You should’ve used dark mode sooner".</span>
         </footer>
+        <script src="./index.js"></script>
     </body>
 </html>

@@ -1,0 +1,41 @@
+<div class="sidebar-ui">
+    <!-- Module Selector -->
+    <h2>APM Selection:</h2>
+    <select>
+        <option value="switchboard" selected>Switchboard</option>
+    </select>
+
+    <x-polypanel>
+        <x-pp-panel pid="&no-tools" default>
+            <div class="no-tools">
+                <em>No sidebar tools for this module.</em>
+            </div>
+        </x-pp-panel>
+    </x-polypanel>
+
+    <!-- Dynamic Controls -->
+    <!-- {#if $selectedSidebarControls}
+    {#each Object.entries($selectedSidebarControls) as [group, controls]} -->
+    <!-- <div class="group-block">
+        <h3>{group}</h3> -->
+        <!-- {#each controls as control (control.routing_key)} -->
+        <!-- <div class="control-block"> -->
+        <!-- {#await loadComponent(control.type) then Component}
+        {#if Component} -->
+        <!-- <svelte:component
+        this={Component}
+        control={control}
+        value={selectedValues[control.routing_key]}
+        result={commandResults[control.routing_key]}
+        on:trigger={(e) => handleCommand(control, e.detail || {})}
+        on:change={(e) => control.type === 'dropdown' && handleDropdownChange(control, e)}
+        />
+        {/if}
+        {/await} -->
+        <!-- </div> -->
+        <!-- {/each} -->
+    <!-- </div> -->
+    <!-- {/each}
+    {:else} -->
+    <!-- {/if} -->
+</div>
