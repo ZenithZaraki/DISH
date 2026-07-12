@@ -58,7 +58,13 @@ class HTMLInclude extends HTMLElement {
                 n --;
                 check();
             } else if (this.hasAttribute("tagname")) {
-                const pass = ` pass='${this.getAttribute("pass")}'`;
+                // const pass = ` passID='${this.getAttribute("pass")}'`;
+                let pass;
+                if (this.hasAttribute("pass")) {
+                    const id = SupportsPassthrough.getPassID();
+                    SupportsPassthrough.passData[id] = this.getAttribute("pass");
+                    pass = ` passID="${id}"`;
+                }
                 component.html = `<${this.getAttribute("tagname")}${this.hasAttribute("pass")?pass:""}/>`;
                 n --;
                 check();
@@ -112,12 +118,20 @@ class HTMLInclude extends HTMLElement {
 customElements.define("x-include", HTMLInclude);
 
 class SupportsPassthrough extends HTMLElement {
+    static passData = {};
+    static #passID = 0;
+    static getPassID() {
+        return this.#passID++;
+    }
     constructor() {
         super();
     }
     connectedCallback() {
-        if (this.hasAttribute("pass")) {
-            const p = JSON.parse(this.getAttribute("pass"));
+        if (this.hasAttribute("passID")) {
+            const id = this.getAttribute("passID");
+            const p = JSON.parse(SupportsPassthrough.passData[id]);
+            delete SupportsPassthrough.passData[id];
+            this.removeAttribute("passID");
             for (const k in p) {
                 this.setAttribute(k, p[k]);
             }
