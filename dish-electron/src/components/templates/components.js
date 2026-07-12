@@ -11,8 +11,9 @@ class ISOLATED extends HTMLElement {
     /**@type {HTMLTemplateElement} */
     static #content;
     static #compname = "ISOLATED";
+    static #path = "components";
     static #ready = new Promise(r => {
-        fetch(`${WEBROOT}/components/${this.#compname}/${this.#compname}.html`).then(async res => {
+        fetch(`${WEBROOT}/${this.#path}/${this.#compname}/${this.#compname}.html`).then(async res => {
             this.#content = document.createElement("template");
             this.#content.innerHTML = await res.text();
             r();
@@ -27,7 +28,7 @@ class ISOLATED extends HTMLElement {
 
     async connectedCallback() {
         await this.#self.#ready;
-        this.#root.appendChild(makeElement("link",{rel:"stylesheet",type:"text/css",href:`${WEBROOT}/components/${this.#self.#compname}/${this.#self.#compname}.css`}));
+        this.#root.appendChild(makeElement("link",{rel:"stylesheet",type:"text/css",href:`${WEBROOT}/${this.#self.#path}/${this.#self.#compname}/${this.#self.#compname}.css`}));
         this.#root.append(this.#self.#content.content);
     }
 }

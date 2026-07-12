@@ -1,0 +1,29 @@
+button {
+    padding: 0.65rem .85rem;
+    background-color: #111;
+    color: #ccc;
+    border: 1px solid #0ff;
+    border-radius: 7px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: 'OCR A Extended', monospace;
+    transition: 
+        box-shadow 0.3s ease,
+        color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+button:hover, button:focus {
+    outline: none;
+    color: #0ff;
+    border-color: #0ff;
+    box-shadow: 0 0 8px #0ff, 0 0 16px #0ff;
+    background-color: #000;
+    transform: translateY(-3px);
+}
+
+button:active {
+    transform: scale(0.92);
+    box-shadow: 0 0 4px #0ff inset;
+}

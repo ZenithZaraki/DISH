@@ -8,11 +8,19 @@ import inspect
 import importlib
 import traceback
 import importlib.util
-from typing import Any, Dict
+from typing import Any, Dict, Callable, Awaitable
 from pydantic import BaseModel
 from collections import defaultdict
+from dataclasses_json import DataClassJsonMixin
 from fastapi import APIRouter, HTTPException, Request
 from dev.diagnostics import get_logger, terminal_alert
+import ui_parser as uip
+from app.utils.command import json_return
+from app.api.routes.registery import IGNORED_APMS
+
+JSON = Dict[str,Any]
+JSONLike = JSON|DataClassJsonMixin
+CommandHandler = Callable[[str,JSON],Awaitable[JSON]|JSON]
 
 logger = get_logger("router")
 terminal_alert("[>] DISH Router initialized...", level="INFO")
@@ -79,6 +87,7 @@ def discover_modules(root_dir):
     modules = []
     try:
         for name in os.listdir(root_dir):
+            if name in IGNORED_APMS: continue
             mod_path = os.path.join(root_dir, name)
             if os.path.isdir(mod_path):
                 func_path = os.path.join(mod_path, "functions.py")
@@ -95,45 +104,18 @@ discovered_modules = discover_modules(MODULE_ROOT)
 
 class CommandRequest(BaseModel):
     command: str
-    value: Dict[str, Any] = {}
-
-# --- REGEX Patterns ---
-FUNC_PATTERN = re.compile(r"^(?:async\s+)?def\s+(\w+)\(")
-UI_MARKER_PATTERN = re.compile(r"#\s*@ui\s+(.*)")
-UI_GROUP_PATTERN = re.compile(r"#\s*@ui_group\s+\"(.+?)\"")
-UI_ZONE_PATTERN = re.compile(r'#\s*@ui_zone\s+"?([\w\.\-]+)"?')
-# --- UI Marker Parser ---
-def parse_ui_marker(line):
-    for component_type in VALID_COMPONENT_TYPES:
-        if component_type in line:
-            config = {"type": component_type}
-
-            # Capture standard attributes: name="...", text="...", etc.
-            for attr, val in re.findall(r'(\w+)="(.*?)"', line):
-                if attr != component_type:
-                    config[attr] = val
-
-            # Capture list-type attributes: values=[...], filetypes=[...]
-            for attr, list_val in re.findall(r'(\w+)=\[(.*?)\]', line):
-                config[attr] = [v.strip().strip('"') for v in list_val.split(",")]
-
-            return config
-    return None
+    value: Dict[str, Any] = dict()
 
 # --- Manifest Builder ---
 def scan_file(filepath, module_name):
+    lines = None
     try:
         with open(filepath, "r") as f:
             lines = f.readlines()
     except Exception as e:
         terminal_alert(f"Failed to read {filepath}: {e}", level="ERROR")
         logger.error(f"SCAN_FILE_IO_FAIL | {filepath} | {e}")
-        return {}
-
-    active_zone = "main"
-    group = None
-    ui_stack = []
-    interface_data = defaultdict(dict)
+        return uip.UIManifest()
     module_funcs = set()
 
     # --- Pre-import: ping check ---
@@ -146,68 +128,10 @@ def scan_file(filepath, module_name):
         terminal_alert(f"Error importing app.modules.{module_name}.{module_file}: {e}", level="WARNING")
         logger.warning(f"SCAN_FILE_IMPORT_FAIL | {module_name}.{module_file} | {e}")
         module = None
-
-    def assign_unique_keys(controls, base_key):
-        return [{**ctrl, "routing_key": f"{base_key}.{i}"} for i, ctrl in enumerate(controls)]
-
-    for line in lines:
-        zone_match = UI_ZONE_PATTERN.search(line)
-        group_match = UI_GROUP_PATTERN.search(line)
-        marker_match = UI_MARKER_PATTERN.search(line)
-        func_match = FUNC_PATTERN.match(line)
-
-        # Static controls not tied to a function
-        if (zone_match or group_match) and ui_stack:
-            controls = [parse_ui_marker(u) for u in ui_stack if parse_ui_marker(u)]
-            if controls:
-                keyed_controls = assign_unique_keys(controls, f"{module_name}.{active_zone}.__static__")
-                interface_data[active_zone]["__static__"] = {
-                    "group": group,
-                    "controls": keyed_controls
-                }
-            ui_stack = []
-            group = None
-
-        if zone_match:
-            active_zone = zone_match.group(1).strip()
-            continue
-        if group_match:
-            group = group_match.group(1).strip()
-            continue
-        if marker_match:
-            ui_stack.append(marker_match.group(1).strip())
-            continue
-        if func_match:
-            func_name = func_match.group(1).strip()
-            base_key = f"{module_name}.{active_zone}.{func_name}"
-            controls = [parse_ui_marker(u) for u in ui_stack if parse_ui_marker(u)]
-            ui_stack = []
-            if controls:
-                valid = func_name in module_funcs
-                keyed_controls = assign_unique_keys(controls, base_key)
-                interface_data[active_zone][func_name] = {
-                    "group": group,
-                    "controls": keyed_controls,
-                    "routing_key": base_key,
-                    "ping": valid
-                }
-            group = None
-
-    # Final unprocessed stack
-    if ui_stack:
-        controls = [parse_ui_marker(u) for u in ui_stack if parse_ui_marker(u)]
-        if controls:
-            keyed_controls = assign_unique_keys(controls, f"{module_name}.{active_zone}.__static__")
-            interface_data[active_zone]["__static__"] = {
-                "group": group,
-                "controls": keyed_controls
-            }
-
-    logger.debug(f"SCAN_FILE_DONE | {module_name} -> zones={list(interface_data.keys())}")
-    return interface_data
+    return uip.parse_manifest(os.path.join(os.path.dirname(filepath), "ui", "manifest.json"), module_name, module_funcs)
 
 # --- Command Mapping ---
-def generate_command_map(interface_data, module_path, module_name):
+def generate_command_map(interface_data: uip.UIManifest, module_path, module_name):
     command_map = {}
 
     try:
@@ -218,6 +142,11 @@ def generate_command_map(interface_data, module_path, module_name):
     except Exception as e:
         logger.exception(f"[X] MODULE IMPORT FAILED] {module_name}: {e}")
         return {}
+    
+    for cmd in interface_data.routed_commands():
+        if cmd.routing_key != "!" and interface_data.commands[cmd.command_id].exists:
+            command_map[cmd.routing_key] = getattr(mod, interface_data.commands[cmd.command_id].func, None)
+    return command_map
 
     for zone, funcs in interface_data.items():
         for func_key, entry in funcs.items():
@@ -289,11 +218,20 @@ def generate_command_map(interface_data, module_path, module_name):
     return command_map
 
 full_command_map = {}
+module_manifests: Dict[str, uip.UIManifest] = {}
+
+print(f"DISCOVERED:\n{'\n'.join(map(lambda x: x[1], discovered_modules))}", file=sys.stderr)
 
 for filepath, module_name in discovered_modules:
+    print(f"DATA FROM {module_name}", file=sys.stderr)
     interface_data = scan_file(filepath, module_name)
+    module_manifests[module_name] = interface_data
+    print(interface_data, file=sys.stderr)
     local_map = generate_command_map(interface_data, filepath, module_name)
+    print(local_map, file=sys.stderr)
     full_command_map.update(local_map)
+
+print(full_command_map, file=sys.stderr)
 
 command_map = full_command_map
 logger.info(f"COMMAND_MAP_BUILT | size={len(command_map)}")
@@ -303,6 +241,7 @@ ROUTER_READY = True
 # --- API Route ---
 @router.get("/manifest/{module_name}")
 def get_module_manifest(module_name: str):
+    return [*map(uip.UIGroup.to_dict,module_manifests[module_name].structure)]
     module_path = os.path.join(MODULE_ROOT, module_name)
     if not os.path.exists(module_path):
         raise HTTPException(status_code=404, detail="Module not found")
@@ -370,6 +309,19 @@ async def router_run_command(payload: CommandRequest):
         return {"status": "bad request", "detail": "Missing or invalid command"}
 
     logger.debug(f"COMMAND_MAP_FIRST5 | {list(command_map.keys())[:5]}")
+
+    func: CommandHandler = command_map.get(command, None)
+    if not func:
+        return {"status":"command not found", "detail":"command not in command map, check that the manifest was loaded successfully"}
+    try:
+        result: dict | DataClassJsonMixin = func(command, value)
+        if "__await__" in dir(result):
+            result = await result
+    except Exception as e:
+        traceback.print_exc(file=sys.stderr)
+    if type(result) == dict:
+        return result
+    return result.to_dict()
 
     # --- Fallback command handler ---
     def toggle_module(value: dict):
