@@ -7,7 +7,7 @@ const MODROOT = `${WEBROOT}/modules`;
 
 /**
  * @param {string} tag
- * @param {{classList:string[]?}&Record<string,string>} attrs
+ * @param {{classList:string[]?,children:Array<HTMLElement|string>?}&Record<string,string>} attrs
  * @returns {HTMLElement}
  */
 function makeElement(tag, attrs) {
@@ -15,6 +15,8 @@ function makeElement(tag, attrs) {
     for (const k in attrs) {
         if (k === "classList") {
             t.classList.add(...attrs[k]);
+        } else if (k === "children") {
+            t.append(...attrs[k]);
         } else {
             t[k] = attrs[k];
         }
@@ -52,8 +54,12 @@ class HTMLInclude extends HTMLElement {
                 n --;
                 check();
             });
-            if (this.hasAttribute("tagname")) {
-                component.html = `<${this.getAttribute("tagname")}/>`;
+            if (this.hasAttribute("notag")) {
+                n --;
+                check();
+            } else if (this.hasAttribute("tagname")) {
+                const pass = ` pass='${this.getAttribute("pass")}'`;
+                component.html = `<${this.getAttribute("tagname")}${this.hasAttribute("pass")?pass:""}/>`;
                 n --;
                 check();
             } else {
@@ -104,3 +110,17 @@ class HTMLInclude extends HTMLElement {
 }
 
 customElements.define("x-include", HTMLInclude);
+
+class SupportsPassthrough extends HTMLElement {
+    constructor() {
+        super();
+    }
+    connectedCallback() {
+        if (this.hasAttribute("pass")) {
+            const p = JSON.parse(this.getAttribute("pass"));
+            for (const k in p) {
+                this.setAttribute(k, p[k]);
+            }
+        }
+    }
+}

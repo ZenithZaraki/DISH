@@ -2,7 +2,14 @@
  * @typedef {never} UNSPECIFIED_JSON
  */
 
-const API_BASE = 'http://127.0.0.1:8000';
+/**
+ * @typedef {{type:string,attrs:Record<string,string>,id:string?,routing_key:string,payload:Record<string,string>}} UIComponent
+ * @typedef {{zone:string,name:string,components:UIComponent[]}} UIGroup
+ * @typedef {UIGroup[]} UIManifest
+ * @typedef {Record<string,{name:string,display_name:string}>} ModuleRegistry
+ */
+
+export const API_BASE = 'http://127.0.0.1:8000';
 
 const CACHED_MODULE_DATA = {
     REGISTRY: null,
@@ -16,7 +23,7 @@ export function invalidateModuleCache() {
 
 /**
  * fetches the module registry and all module manifests
- * @returns {registry:UNSPECIFIED_JSON,manifest:Record<string,UNSPECIFIED_JSON>}
+ * @returns {Promise<{registry:ModuleRegistry,manifest:Record<string,UIManifest>}>}
  */
 export async function fetchModules() {
     const reg = await fetchModuleRegistry();
@@ -31,7 +38,7 @@ fetchModules(); // starts a background fetch of all module data that will then b
 
 /**
  * @param {string} moduleName
- * @returns {Promise<UNSPECIFIED_JSON>}
+ * @returns {Promise<UIManifest>}
  */
 export async function fetchModuleManifest(moduleName) {
     if (moduleName in CACHED_MODULE_DATA.MANIFESTS) {
@@ -62,7 +69,7 @@ export async function fetchModuleManifest(moduleName) {
 // }
 
 /**
- * @returns {Promise<UNSPECIFIED_JSON>}
+ * @returns {Promise<ModuleRegistry>}
  */
 export async function fetchModuleRegistry() {
     if (CACHED_MODULE_DATA.REGISTRY) {
@@ -84,7 +91,7 @@ export async function fetchModuleRegistry() {
 /**
  * runs a command
  * @param {{command:string,value:object}} requestBody
- * @returns {UNSPECIFIED_JSON}
+ * @returns {Record<string,any>}
  */
 export async function runCommand(requestBody) {
     if (
@@ -119,7 +126,7 @@ export async function runCommand(requestBody) {
 /**
  * uploads a file to the backend
  * @param {string[]} files
- * @returns {UNSPECIFIED_JSON}
+ * @returns {Record<string,any>}
  */
 export async function uploadFiles(files) {
     const formData = new FormData();
@@ -175,4 +182,31 @@ export async function runStreamCommand(requestBody, onToken) {
             }
         });
     }
+}
+
+/**
+ * @param {UIManifest} manifest
+ * @param {string} zone
+ * @param {(name:string,children:HTMLElement[])=>HTMLElement} makeGroup
+ * @returns {HTMLElement[]}
+ */
+export function renderModuleArea(manifest, zone, makeGroup) {
+    return manifest.filter(v => v.zone === zone).map(group => {
+        return makeGroup(group.name, group.components.map(comp => {
+            const root = (()=>{const l = comp.type.split("/");const f =l.slice(0,l.length-1).join("/");if(f.length)return`components/${f}`;return f;})();
+            const name = comp.type.split("/").pop();
+            const inc = document.createElement("x-include");
+            inc.setAttribute("tagname", `x-${name}`);
+            if (root) inc.setAttribute("root", root);
+            inc.setAttribute("name", name);
+            const pass = {
+                ...comp.attrs??{}
+            };
+            if (comp.id)pass.id=comp.id;
+            if (comp.routing_key&&comp.routing_key!=="!")pass["routing-key"]=comp.routing_key;
+            if (comp.payload)pass.payload=JSON.stringify(comp.payload);
+            inc.setAttribute("pass", JSON.stringify(pass));
+            return inc;
+        }));
+    });
 }

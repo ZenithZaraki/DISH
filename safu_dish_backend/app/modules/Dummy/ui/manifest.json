@@ -1,0 +1,26 @@
+{
+    "structure": [
+        {
+            "zone": "sidebar",
+            "name": "Dummy Controls",
+            "components": [
+                {
+                    "type": "std/button",
+                    "attrs": {
+                        "text": "ping"
+                    },
+                    "routing_key": ".ping",
+                    "command_id": "ping",
+                    "payload": {
+                        "data": "hello"
+                    }
+                }
+            ]
+        }
+    ],
+    "commands": {
+        "ping": {
+            "func": "ping"
+        }
+    }
+}

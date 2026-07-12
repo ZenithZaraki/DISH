@@ -20,6 +20,10 @@ REGISTRY_FILE = Path(__file__).resolve().parent.parent / "config" / "moduleregis
 USER_REGISTRY_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "userdata", "appconfig", "moduleregistry.json"))
 MODULES_DIR = os.path.join(BASE_DIR, "modules")
 
+IGNORED_APMS = []
+with open(os.path.join(BASE_DIR, "config", "apm_ignore.json")) as f:
+    IGNORED_APMS = json.load(f)
+
 rterminal_alert("[>] Module Registery initialized...", level="INFO")
 
 def update_bootstate(key: str, value: bool):
@@ -110,6 +114,8 @@ def ensure_registry():
     logger.info("[REGISTRY] Ensuring registry...")
     modules = {}
     for entry in os.listdir(MODULES_DIR):
+        if entry in IGNORED_APMS:
+            continue
         mod_path = os.path.join(MODULES_DIR, entry)
         if os.path.isdir(mod_path) and os.path.exists(os.path.join(mod_path, "functions.py")):
             modules[entry] = {

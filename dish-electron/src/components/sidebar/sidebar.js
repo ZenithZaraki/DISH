@@ -38,6 +38,21 @@ class Sidebar extends HTMLElement {
             for (const k in reg) {
                 modSelect.appendChild(makeElement("option",{value:k,textContent:reg[k].display_name??k}));
                 main_panel.appendChild(makeElement("x-pp-panel",{pid:k,textContent:`polypanel for module '${k}'`}));
+                Sidebar.#api.fetchModuleManifest(k).then(async man => {
+                    if (man.some(v => v.zone==="sidebar")) {
+                        /**@type {PolyPanelFrame} */
+                        const p = document.createElement("x-pp-panel");
+                        p.pid = `mod-${k}`;
+                        Sidebar.#api.renderModuleArea(man, "sidebar", (name, children) => {
+                            const g = makeElement("div", {classList:["group-block"],children:[
+                                makeElement("h3", {textContent:name}),
+                                makeElement("div", {classList:["control-block"],children})
+                            ]});
+                            p.appendChild(g);    
+                        });
+                        controls_panel.appendChild(p);
+                    }
+                });
             }
         });
     }

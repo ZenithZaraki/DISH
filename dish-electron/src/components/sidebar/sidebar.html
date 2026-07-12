@@ -5,10 +5,12 @@
         <option value="switchboard" selected>Switchboard</option>
     </select>
 
+    <!-- <x-include root="components/std" name="button" notag></x-include> -->
     <x-polypanel>
         <x-pp-panel pid="&no-tools" default>
             <div class="no-tools">
                 <em>No sidebar tools for this module.</em>
+                <!-- <x-button routing-key="Dummy.sidebar.ping" payload='{"data":"hello"}'></x-button> -->
             </div>
         </x-pp-panel>
     </x-polypanel>
