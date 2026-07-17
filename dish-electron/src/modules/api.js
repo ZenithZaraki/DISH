@@ -202,7 +202,7 @@ export function renderModuleArea(manifest, zone, makeGroup) {
             const pass = {
                 ...comp.attrs??{}
             };
-            if (comp.id)pass.id=comp.id;
+            if (comp.id)pass.compid=comp.id;
             if (comp.routing_key&&comp.routing_key!=="!")pass["routing-key"]=comp.routing_key;
             if (comp.payload)pass.payload=JSON.stringify(comp.payload);
             inc.setAttribute("pass", JSON.stringify(pass));
