@@ -11,10 +11,13 @@ a valid APM conforms to the following file structure:
 |\ __init__.py
 |\ ui
  |\ manifest.json
+ |\ interface.picl
 |\ functions.py
 
 
 functions.py is where all public-facing API members must reside, functions.py is free to import additional files in the same directory or subdirectories
 
 manifest.json defines the UI and how commands are mapped from the frontend to implementing functions
+
+interface.picl defines the contract for what commands must exist, the parameters they accept, and their return values, see "docs/picl.txt"
 

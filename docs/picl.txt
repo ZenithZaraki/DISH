@@ -1,0 +1,190 @@
+this file defines the Platform Independent Contract Language
+
+WARNING: this language is still under development, DO NOT UNDER ANY CIRCUMSTANCE rely on the current specified behavior, syntax, or other features. do not rely on the implementation of the interpreter being correct or complete
+
+the purpose of PICL is to provide a lightweight expression language with the capability of declaring interface contracts that commands must uphold for the frontend UIs of DISH APMs
+
+
+This Document:
+    this section describes the manner that this document is to be interpreted in
+
+    "{...}" (quotes) - the content of the quotes are to be interpreted as a snippet
+
+    "{}" (placeholder) - the "{}" is to be interpreted as a placeholder identified by its contents, unquoted {} are not placeholders, some patterns are explicitly not placeholders (such as "{(...)}", the block construct)
+
+    "..." (elision) - an elision is to be interpreted as an unspecified value that may have any form
+
+    "iff" (if and only if) - has the same meaning as usual
+
+
+Whitespace:
+    PICL is newline significant, whitespace is ignored except for the purpose of separating tokens
+    all constraints must reside on their own lines, all contract starts and ends must reside on their own lines
+
+Comments:
+    all characters outside of a PICL contract are ignored as comments
+    lines within contracts that begin with '%' are comments
+
+Structure:
+    a PICL file is structured as a series of PICL contracts
+
+    a PICL contract is enclosed by '{}' and is made up of several constraints
+
+Constraint Restrictions:
+    all contracts must be exactly one of @required, @optional, or @internal
+
+    there exists a well-defined ordering that constraint types may appear in, it is an error to violate this ordering
+    this ordering varies depending on what constraints have already appeared
+
+    @required / @optional:
+        @required | @optional
+        @type
+        @ident
+        @boundas
+        @uses
+        @signature
+        @flag
+    
+    @internal + @external:
+        @internal
+        @external
+    
+    @internal:
+        @internal
+        @definition
+        @type
+        @uses
+        @param
+        @expands
+
+Constraints List:
+    all constraints are prefixed with "@"
+
+    @required:
+        the @required constraint indicates that this contract must be satisfied for the frontend to work, if this contract is not satisfied, the module must fail to be loaded
+    
+    @optional:
+        the @optional constraint indicates that this contract may or may not be satisfied for the frontend to work, it additionally specifies a flag to be set to indicate if this contract was satisfied or not
+    
+    @type:
+        the @type constraint indicates what type of interface this contract refers to, the specific meaning of any given type is defined by the user of the contract
+    
+    @ident:
+        the @ident constraint indicates what backend resource of the type specified by the @type constraint must be present
+    
+    @boundas:
+        the @boundas constraint indicates what handle the backend must bind the resource to that the frontend can access
+    
+    @signature:
+        the @signature constraint indicates what parameters and return values are acceptable
+        in the case that multiple signatures are acceptable, this constraint may appear multiple times. in this case, each may optionally specify a value and flag pair to indicate which signature matched
+        if the flag-value pair option is used, all @signature constraints in a contract must have a flag-value pair
+    
+    @internal:
+        the @internal constraint indicates that the contract is purely for internal use
+    
+    @external:
+        the @external constraint indicates another PICL file to include one or more contracts from
+    
+    @definition:
+        the @definition constraint indicates that this contract defines terms for use in other contracts
+    
+    @uses:
+        the @uses constraint indicates that this contract uses the specified definitions
+    
+    @param:
+        the @param constraint indicates the name, type, and internal identifier of a parameter
+    
+    @expands:
+        the @expands constraint indicates the constraints to be included in contracts that use this definition
+    
+    @flag:
+        the @flag constraint indicates a flag for use externally
+
+
+Constraints Usage:
+
+    @required:
+        @required
+    
+    @optional:
+        @optional "$flag" - "$flag" must be the name given to a flag constraint in this contract
+    
+    @internal:
+        @internal
+    
+    @external:
+        RESERVED
+    
+    @type:
+        @type "type" - if the @internal constraint was used, "type" may be one of the following:
+            "type" - a typedef
+            "macro" - a macro, should not be supported by parsers at this time
+    
+    @param:
+        @param (name) [type] "ident" - "ident" will be substituted for the value of parameter "name"
+        @param [ident] - valid in definitions of type "type", "ident" is the internal name of a generic parameter and must consist of only uppercase ascii alphabetical characters
+    
+    @ident:
+        @ident "ident"
+    
+    @signature:
+        @signature {px: typex} -> {rx: rtypex} - no flag form
+        @signature (value) [flag] {px: typex} -> {rx: rtypex} - flag form, flag "flag" is set to "value", "flag" must use the #given special value, if no signatures match "flag" is omitted
+    
+    @definition:
+        @definition "name"
+    
+    @expands:
+        @expands {
+            constraints
+        }
+    
+    @uses:
+        @uses "name" - no parameters or typedef
+        @uses "name" (px=valuex) - macro with parameters
+    
+    @boundas:
+        @boundas "handle" - the specific form of handle is defined by the user of the contract
+    
+    @flag:
+        @flag "$flag" (format) "pubname" = value - defines "$flag" internally as the name of this flag, mapping to "pubname" externally, "format" defines the format that this flag should have externally. PIXL must be a valid format
+
+        the following special values exist:
+            #given - the value is specified elsewhere
+            #self::satisfied - boolean, "true" if this contract was upheld, "false" otherwise
+
+
+Types:
+    because PICL exists to provide interface contracts for API calls made using JSON structures, the PICL type system provides tooling for describing both generic records and records with defined keys
+
+    the following primitive types are available:
+        - str - the string type
+        - int - the integer type
+        - float - the floating point type
+        - bool - the boolean type
+        - null - the null type
+        - any - any type
+    
+    generic types are defined by "type" type definition contracts that have one or more "@param" constraints
+    type parameters of generic types are specified via the "<>" syntax
+
+    the following generic builtin types are available:
+        - union<...> - where "..." is a comma separated list of types, matches unions with the same type of the types in the union
+        - oneof<...> - where "..." is a comma separated list of types, matches any of the types as well as any "onof" of "union" values with type arguments that are subsets of its own arguments
+        - map<K,V> - a map with keys of type "K" and values of type "V"
+        - array<T> - an array with items of type "T"
+        - tuple<...> - where "..." is a comma separated list of types, an array of fixed size where each element index has the type of the corresponding type in the tuple's arguments
+    
+    the record type is a map with specified keys, it is specified with the following syntax:
+        {key0: type0 [, keyx: typex]*}
+    
+    a type may be postfixed with the '?' symbol, which indicates that it is allowed to be null or omitted (if applicable)
+    if a type in the arguments of a tuple is postfixed with '?', that element may be null, but not omitted
+    it is illegal for a type in the arguments of a union to be postfixed with '?'
+
+
+    a special function type is allowed as the type of a "@signature" constraint, this type has the following syntax:
+        "(input -> output)" - where "input" and "output" are both records
+    
+    type names and parameters for generic types may only be comprised of ascii alphabetical characters + '_'

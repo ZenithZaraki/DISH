@@ -1,0 +1,34 @@
+% this is an example file, so some extra contracts are included to demonstrate features
+
+{
+    % the primary contract
+    @required
+    @type "command"
+    @ident "echo"
+    @boundas "@mod.echo"
+    @signature ({value: str} -> {value: str})
+}
+
+{
+    % defines "number" as something that is either an integer or a float
+    @internal
+    @definition "number"
+    @type "type"
+    @signature union<int,float>
+}
+
+{
+    % defines an optional contract and some flags
+    @optional "$altecho"
+    @type "command"
+    @ident "altecho"
+    @boundas "@mod.altecho"
+    @uses "number"
+    @signature (0) ["$altecho-sig"] ({value: number} -> {value: str})
+    @signature (1) ["$altecho-sig"] ({value: float} -> {value: str})
+    @signature (2) ["$altecho-sig"] ({value: int} -> {value: str})
+    @flag "$altecho" (PIXL) "@altecho" = #self::satisfied
+    @flag "$altecho-sig" (PIXL) "@altecho-sig" = #given
+}
+
+
