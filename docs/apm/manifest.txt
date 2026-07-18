@@ -4,6 +4,8 @@ manifest.json has the following format
 {
     structure<UIGroup[]>: defines the UI structure
     commands<Record<string,Command>>: defines the commands available to the structure
+    payloads<Record<string,CommandPayload>>: defines the command payloads available to the structure
+    codefile<string?>: if present, defines a file that PIXL code may be referenced from
 }
 
 UIGroup:
@@ -16,11 +18,23 @@ UIComponent:
 {
     type<string>: what UI element this component is
     attrs<Record<string,string>>: attributes to be passed to the frontend UI component during creation (eg. the text of a button)
-    id<string?>: optional id for reference by other UI components
+    id<string?>: optional id for reference by other UI components, must match /[a-zA-Z0-9_-]+/
     routing_key<string|"!"|("."+string)|null>: see Routing Keys
     command_id<string>: the command that is executed, must be a key of the "commands" field of the ancestor Manifest
-    payload<Record<string,any|"$"+string>>: the payload that is used, see Payloads
+    payload<Record<string,PayloadCondition>>: the payload that is used, see Payloads
 }
+
+PayloadCondition:
+{
+    priority<non-negative int>: the priority of this condition
+    condition<string>: the condition, see Conditions
+}
+
+CommandPayload:
+Record<string,Record<string,(
+    {raw<any>: raw value}|
+    {dyn<string>: value derived from a field, see Payloads}
+)>>
 
 Command:
 {
@@ -36,11 +50,18 @@ the "routing_key" field of the UIComponent allows for three forms:
 "."+string - auto-generates the rest of the routing key, produces a key of the form "{module}.{zone}.{string}"
 string - manual specification of the full routing key
 
+Conditions:
+a condition is a PIXL expression (see "docs/pixl.txt")
+the resolved value is implicitly coerced to a boolean value using PIXL boolean coercion semantics
+
 Payloads:
-payloads may be specified entirely with hardcoded values, or include dynamic values
+payloads are defined in the Manifest.payloads record, a payload field with the "raw" field will be the hardcoded value of the field, a field with the "dyn" field will be derived from another ui component's state
 
-a dynamic value is a string prefixed with "$" (use "$$" to escape this and render a single "$" followed by the rest of the string)
+the payload to be used with a command is determined from the payload conditions, it is an error if no condition succeeds
+payload conditions are evaluated in order from highest to lowest priority, the first condition that passes will be used
 
-a dynamic value is of the form "${component_id}.{field_name}"
-"component_id" is the id of the component that data will be used from, the special reserved id of "@self" is used when the payload depends on the value of the component that will trigger the command
-"field_name" is the name of the public field that the payload will pull data from
+the keys of the UIComponent.payload record must be keys of the Manifest.payloads record, when a condition passes the payload used is the one with the same key
+
+dynamic payload fields are of the form "{component_id}.{field_name}"
+the reserved component id of "@self" refers to the component executing the command
+

@@ -1,0 +1,44 @@
+{
+    "codefile": "ui/logic.pixl",
+    "commands": {
+        "echo": {
+            "func": "echo"
+        }
+    },
+    "structure": [
+        {
+            "zone": "sidebar",
+            "name": "Simple Test",
+            "components": [
+                {
+                    "type": "std/text",
+                    "attrs": {},
+                    "id": "output",
+                    "routing_key": "!"
+                },
+                {
+                    "type": "std/inputfield",
+                    "attrs": {
+                        "type": "text"
+                    },
+                    "id": "input",
+                    "routing_key": "!",
+                    "on": {
+                        "@self.init": "@ref(input_init)"
+                    }
+                },
+                {
+                    "type": "std/button",
+                    "attrs": {
+                        "text": "Echo"
+                    },
+                    "id": null,
+                    "routing_key": ".echo",
+                    "on": {
+                        "@self.click": "@ref(echo)"
+                    }
+                }
+            ]
+        }
+    ]
+}

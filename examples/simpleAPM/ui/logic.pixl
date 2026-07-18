@@ -1,0 +1,23 @@
+
+
+'if the alternate echo function is present, switch the input type to numeric
+@func input_init(): null {(
+    @if($(@altecho)){(
+        $($%input.type)=#number#;
+    )}
+    @return null;
+)}
+
+'uses DXE so it doesn't need to handle errors from failed dispatches
+@opt(DXE) @func echo(): null {(
+    payload={#value#:$(%input.value)};
+    result=null;
+    @if($(@altecho)){(
+        result=dispatch(payload,#@mod.altecho#);
+    )}@else{(
+        result=dispatch(payload);
+    )}
+    $($%output.text)=result[#value#];
+    @return null;
+)}
+

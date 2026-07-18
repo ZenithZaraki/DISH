@@ -1,0 +1,355 @@
+this file defines the Platform Independent eXpression Language
+
+WARNING: this language is still under development, DO NOT UNDER ANY CIRCUMSTANCE rely on the current specified behavior, syntax, or other features. do not rely on the implementation of the interpreter being correct or complete
+
+the purpose of PIXL is to provide a lightweight expression language with the capability of interfacing with external values to provide a platform and language agnostic method of defining basic command logic for the frontend UIs of DISH APMs
+PIXL therefore provides tools for concision, and encourages the offloading of non-trivial logic to the backend of the APM while still allowing simple tasks to be performed on the frontend
+
+
+a Platform Independent Expression (pix) is represented as a JSON string, it is illegal for the " character (double quote) or ' character (single quote) to appear anywhere inside an inline pix to avoid interfering with the JSON format
+
+
+This Document:
+    this section describes the manner that this document is to be interpreted in
+
+    "{...}" (quotes) - the content of the quotes are to be interpreted as a snippet
+
+    "{}" (placeholder) - the "{}" is to be interpreted as a placeholder identified by its contents, unquoted {} are not placeholders, some patterns are explicitly not placeholders (such as "{(...)}", the block construct)
+
+    "..." (elision) - an elision is to be interpreted as an unspecified value that may have any form
+
+    "iff" (if and only if) - has the same meaning as usual
+
+
+Misc:
+    the tilde character ('~') when appearing outside of a string has an implementation defined meaning, and is treated as though it were whitespace (this DISH implementation of PIXL uses '~' to toggle certain debugging features)
+
+
+Whitespace:
+    PIXL is not whitespace significant, whitespace is ignored except for the purpose of separating tokens
+
+Comments:
+    inline PIXL does not support comments
+    PIXL code within files use the ' character (single quote) to indicate a line comment
+
+Options:
+    an inline pix string may begin with a prefix defining the options to be used, this prefix (if present), is terminated with the "::" string. a pix with no "::" is equivalent to one that starts with "::", both representations use the default options.
+
+    the options prefix is of the following form "[OP [,OP]*]?" where OP is the code of an option that is to be toggled
+    it is an error for any code to appear more than once
+
+        Option Codes:
+        "ICX" - "ignore invalid conversions" - default false
+        "DXE" - "dispatch fail error" - default false
+        "FNI" - "ignore func naked" - default false
+        "FNR" - "return func naked" - default false
+    
+    PIXL code referenced from files using the "@ref" construct use options specified by the "@opt" construct
+
+    "@opt({options})" - applies the options specified by "options" to the proceeding function or named expression, "options" has the same form as the inline options prefix excluding the terminating "::", the options are only used when the proceeding item is the specified item of the reference
+
+Keywords:
+    keywords begin with "@" followed by a string of ascii alphanumeric characters + '_'
+
+    the following keywords exist:
+    "@shadow {vardecl}" - see "Scoping -> keyword constructs"
+    "@persist {vardecl}" - see "Functions -> keyword constructs"
+    "@func {funcdecl}" - see "Functions"
+    "@return {value}" - see "Functions"
+    "@if {...}" - see "Control Flow -> Conditionals"
+    "@elif {...}" - see "Control Flow -> Conditionals"
+    "@else {...}" - see "Control Flow -> Conditionals"
+    "@for {...}" - see "Control Flow -> Loops"
+    "@while {...}" - see "Control Flow -> Loops"
+    "@ref({name})" - see "Usage"
+    "@opt({options})" - see "Options"
+    "@named({name}) {expr};" - see "Usage"
+
+Usage:
+    PIXL pix's are intended for use either as inline snippets or as files containing many related snippets that are referenced from multiple places
+
+    inline use of a pix requires no special handling, but using snippets from another file is done via the "@ref" keyword construct
+
+    the "@ref({name})" construct intructs the PIXL executor to instead execute the PIXL code specified by "name"
+
+    "name" is of the following form [DIRSPEC.]?[FILESPEC.]?[ITEMSPEC], "DIRSPEC" is handled according to the contract in use between the frontend and backend, "FILESPEC" is the name of a file within the directory specified by "DIRSPEC", "ITEMSPEC" is the name of a function or named expression within the specified file
+
+    the "@name({name}) {expr};" construct gives a name to an expression, enabling the use of it via "@ref"
+    "name" may be any valid identifier, "expr" may be any valid expression
+
+Parameters:
+    a pix binds zero or more external parameters using the syntax "$(NAME)" where NAME is the name of a parameter,
+    NAME may contain ascii alphanumeric characters as well as '@', '%', '-', '_', '.', '|'
+    additionally, NAME may be prefixed with '$' to indicate that the external parameter is being modified, the parameter must be writable and have its state preserved between evaluations
+    a name prefixed with '$' will resolve to the same value as the name without the prefix
+    the external parameter is replaced with the value it resolves to, this occurrs lazily, allowing for expressions that depend on different parameters based on other conditions
+
+Scoping:
+    PIXL scoping occurs in the following way.
+    there is a top level scope, every syntactic component has one of the following impacts: no boundary, soft boundary, hard boundary.
+    when the scope that defined a variable ends, that variable is deleted (unless marked as persistent).
+    all statements and expressions have access to the union of all ancestor scopes until the most recent hard boundary.
+    the {(...)} construct creates a soft boundary between the current scope and the scope created for the code within the construct.
+    syntaxes with the "no boundary" effect do not create new scopes
+
+    Keyword Constructs:
+        the following keyword constructs have effects on scoping
+
+        "@shadow {variable declaration}" - makes the declared variable independent of any identically named variables in accessible ancestor scopes
+
+
+Types:
+    custom types are not supported
+
+    Error:
+    the error type wraps an inner value, and is instantiated by placing '@!' before the value
+    errors are emitted as soon as they are instanced
+
+    String:
+    a string is declared by surrounding it with a pair of '#', a '\' is used for escape sequences
+    the following escapes are available:
+    \# -> #
+    \\ -> \
+    \xNN -> the byte NN in hexadecimal
+
+    characters may be indexed with the subscript and subscript range operators
+
+    Integer:
+    integers consist of ascii numerals optionally prefixed by '+' or '-'
+    when an integer and float are used in the same binary operation (eg. "1+2.0"), the integer is converted to a float
+
+    Float:
+    IEEE 754 double precision floating point values have the same structure as an integer, but contain exactly one decimal point '.', this decimal must have at least one digit on both sides of it
+
+    Boolean:
+    true and false
+    all types can implicitly be coerced to a boolean via their "truthiness"
+    a truthy value is one that is not falsey
+    a falsey value is one of the following:
+        - nan (not a number)
+        - -inf (negative infinity)
+        - ## (the empty string)
+        - 0
+        - 0.0
+        - false
+        - null
+        - {} (the empty record)
+        - [] (the empty array)
+
+    Null:
+    null
+
+    Record:
+    the record type is created in the same manner as a python dictionary created with the '{}' syntax, the keys must be strings
+    entries are accessed with the subscript operator
+
+    Array:
+    the array type is created using '[]'
+    entries are accessed with the subscript and subscript range operators
+
+    Function:
+    the function type is created with the function declaration syntax, see "Functions"
+    functions are first-class, and may be aliased and passed as parameters
+
+Operators:
+    all 'logical' operators perform implicit conversion to booleans
+
+    Binary:
+    +   - addition
+    -   - subtraction
+    *   - multiplication
+    /   - division
+    %   - remainder
+    **  - exponentiation
+    &   - logical and
+    |   - logical or
+    ^   - logical xor
+    >   - greater than
+    >=  - greater than or equal
+    <   - less than
+    <=  - less than or equal
+    ==  - equality
+    ~~  - coerced equality
+    (1)[(2)] - subscript
+    .   - dot (method/field access)
+    in  - inclusion
+    =   - assignment
+
+    Unary:
+    +   - absolute value
+    -   - negation
+    !   - logical not
+    ()  - grouping
+    ++  - increment (postfix and prefix)
+    --  - decrement (postfix and prefix)
+
+    Ternary:
+    (1)[start:end] - subscript range, syntactic sugar for the quaternary form, step is inferred as +1 or -1
+    (1)?(2):(3) - selection
+
+    Quaternary:
+    (1)[start:step:end] - subscript range
+
+    Variadic:
+    (1)(...) - function call
+
+Constructors:
+    some types have constructors that can be used to explicitly convert between types
+
+    string(value) - the string constructor
+    integer(value, radix=10) - the integer constructor, returns "nan" if "ignore invalid conversions" is true
+    float(value) - the float constructor, returns "nan" if the given value cannot be converted
+    bool(value) - the boolean constructor, has the same semantics as implicit boolean coercion
+
+Methods/Fields:
+    it is not possible to define new or modify existing methods and fields on types or instances
+    the following builtin methods and fields exist
+
+    String:
+        x.length - integer, length in bytes
+    Integer:
+        x.toString(radix=10) -> string
+    Float:
+        x.toString() -> string
+    Array:
+        x.length - integer, length in elements
+        x.join(sep) -> string, converts all elements to strings, then returns a new string composed of these strings joined by "sep"
+    Record:
+        x.keys() -> Array<string>, an array containing all keys of the record
+        x.values() -> Array<any>, an array containing all keys of the record
+        x.entries() -> Array<[string,any]>, and array containing all key-value pairs of the record
+
+Coercion:
+    when restricted coercion occurs, the higher order type is coerced into the lower order type
+    types have the following order, from lowest to highest:
+    boolean, string, float, integer
+    types not listed cannot undergo restricted coercion
+
+    additionally, "true" may be coerced to "1" or "1.0", and "false" may be coerced to "0" or "0.0"
+
+Operator Semantics:
+    this section defines the behavior of non-trivial operators (those that are not arithmetic or logical)
+
+    Special Cases:
+        certain operators take on different meaning when applied to specific type combinations, thesse exceptions are listed here
+
+        string + string    - concatenation
+        string * integer   - repetition
+
+    Equality:
+        ==  - the equality operation resolves to true iff the rhs and lhs have the same type and value
+        ~~  - the coerced equality operation resolves to true iff the rhs and lhs have the same type and value after undergoing restricted coercion
+
+    Subscripting:
+        (1)[(2)] - index subscripting, "(2)" is used as the key to index into the array or record "(1)", if the key is not present in the array or record, the operation resolves to null. If "(1)" is of type Array and "(2)" is negative, the resolved element is the abs("(2)") element from the end of the array
+        (1)[start:end] - range subscripting, only valid when "(1)" is of type Array or String, the elements from "start" (inclusive) to "end" (exclusive) are returned in a new array/string as though it were constructed by repeatedly using index subscripting to select those elements from the original array/string
+        (1)[start:step:end] - range step subscripting, only valid when "(1)" is of type Array or String, the elements from "start" (inclusive) to "end" (exclusive) at intervals of "step" are returned in a new array/string
+    
+    Misc:
+        in  - the inclusion operator resolves to true iff the lhs is a key of the rhs
+        (1)?(2):(3) - the selection operator resolves to "(2)" if "(1)" is truthy, and "(3)" otherwise
+    
+    Precedence:
+        operators are applied in the following order, with ties broken by applying the leftmost operator first
+
+        - grouping
+        - all subscript operators, function call, and the dot operator
+        - increment and decrement
+        - exponentiation
+        - remainder, division, and multiplication
+        - addition and subtraction
+        - inclusion
+        - all logical operators
+        - absolute value and negation
+        - all comparison
+        - assignment
+
+Identifiers:
+    an identifier is a string of ascii alphanumeric characters + '_' that does not begin with a digit
+
+    the following identifiers are reserved:
+    true - boolean true
+    false - boolean false
+    null - no value
+    nan - not a number
+    inf - IEEE 754 infinity
+
+    in pixl, checking equality against nan yields true if both sides of the equality are any nan
+
+Control Flow:
+    a naked expression (one not part of a statement) is used as the value the scope resolves to, execution of that scope ends immediately
+
+    all non-block statements are terminated by ';'
+
+    Conditionals:
+        the following conditional syntactic constructs exist
+
+        "@if({condition}){(...)}" - iff "condition" coerces to true, the content of the block is executed
+        "@elif({condition}){(...)}" - iff "condition" coerces to true and the preceeding if/elif block was not executed, the content of the block is executed
+        "@else{(...)}" - iff all preceeding if/elif blocks were not executed, the content of the block is executed
+    
+    Loops:
+        the following loop syntactic constructs exist
+
+        "@for({vardecl};{condition};{expression}){(...)}" - has the same semantics as the JavaScript construct of the same form
+        "@for({vardecl} in {ident}){(...)}" - has the same semantics as the JavaScript construct of the same form when "ident" is of type Record, and has the same semantics as the JavaScript "for of" construct when "ident" is of type Array
+
+        "@while({condition}){(...)}" - has the same semantics as the JavaScript construct of the same form
+
+Builtin Functions:
+    the following builtin functions exist
+
+    dispatch(payload, routing_key=null)
+        the 'dispatch' function dispatches a command http request and returns the final result
+        "payload" must be of type Record
+        "routing_key" must be "null" or of type String, if "null" the executing component's routing key is used
+
+        if "dispatch fail error" is set, a failed dispatch returns an error, otherwise it returns a record with an "err" key set to "true" and an "errcode" set to an error code (see "Dispatch Error Codes")
+    
+    typeof(value)
+        returns a string corresponding to the type of "value"
+        Function -> "function"
+        Record -> "record"
+        Array -> "array"
+        Float -> "float"
+        Integer -> "integer"
+        String -> "string"
+        Boolean -> "boolean"
+        Null -> "null"
+
+Functions:
+    a function is declared with the following syntax:
+    [@opt(...)]? @func name([[arg1: type1 [=default1]?] [,argx: typex [=defaultx]?]*]?): rtype {(...)}
+    
+    all non-default arguments must preceed all default arguments
+
+    Example:
+        @func foo(bar: string, baz: integer = 0): boolean {(...)}
+        declares function "foo" with parameter "bar" of type string, and parameter "baz" of type integer with default value 0, that returns a boolean
+
+        @func foo(bar: string = #hi#, baz: boolean): integer {(...)}
+        is invalid because "bar" has a default value but "baz" does not
+    
+    PIXL is weakly typed, type annotations are not enforced, but are mandatory. the special value "any" may be used in annotations only to indicate that any type is accepted/returned
+
+    PIXL functions implicitly return null if no return statement is encountered
+
+    if a naked expression occurs within a function, it is ignored if "ignor func naked" is set, returned if "return func naked" is set, and causes an error if neither is set
+
+    the "@return {value}" construct is used to return a value
+
+
+Dispatch Error Codes:
+    0 - catch all
+
+Examples:
+
+    a single expression:
+    "$(value)+1"
+
+    a counter:
+    "$($counter)=$(counter)+1;$(counter)"
+
+    using the result of a command to update some text:
+    "DXE::$($%output.text)=dispatch({#value#:$(%input.value)})[#value#]"
+
